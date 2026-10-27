@@ -1,23 +1,22 @@
-# NSDS Dashboard Plus
+# NSDS Dashboard — New Prototype
 
-A Streamlit prototype with five sections:
-- Dashboard
-- Trend analysis
-- Alert center (message generation only; no real delivery)
-- Data management (CSV import; session-only)
-- Methodology and sources
+ต้นแบบระบบเฝ้าระวังโรคตามฤดูกาล ใช้ข้อมูลจำลองเท่านั้น
 
-**Important:** The bundled data are synthetic and must not be presented as real case counts. The app does not send alerts to hospitals.
+## ฟังก์ชัน
+- ภาพรวมระดับประเทศและเขตสุขภาพ
+- วิเคราะห์แนวโน้มรายเดือนและเปรียบเทียบปี พ.ศ.
+- ทดลองระบบแจ้งเตือนจากค่าเฉลี่ย 3 เดือนก่อนหน้า
 
-## Run on Mac
-Open Terminal in this folder, then run:
+## Deploy to Streamlit Community Cloud
+1. สร้าง GitHub Repository ใหม่เพื่อไม่แตะต้อง Repository ต้นฉบับ
+2. อัปโหลด `app.py`, `requirements.txt`, `README.md` ไปที่ root ของ repository
+3. ใน Streamlit Community Cloud เลือก repository ใหม่นี้ และตั้ง Main file path เป็น `app.py`
+4. ชุดข้อมูล CSV ในโฟลเดอร์ `data/` เป็นไฟล์เสริม หากอัปโหลดไปด้วยแอปจะใช้ไฟล์นั้น หากไม่อัปโหลดแอปจะสร้างข้อมูลจำลองให้อัตโนมัติ
+
+## Run locally
 ```bash
-python3 -m pip install -r requirements.txt
-python3 -m streamlit run app.py
+python -m pip install -r requirements.txt
+python -m streamlit run app.py
 ```
-Open the local URL Streamlit prints (usually http://localhost:8501).
 
-## CSV schema
-Required: `disease, year_be, month, cases`
-Optional: `month_name_th, data_status, source_url, source_note`
-Years are Buddhist Era (e.g., 2567), month is 1-12.
+**คำเตือน:** ข้อมูลเป็นข้อมูลสังเคราะห์เพื่อสาธิตเท่านั้น ไม่ใช่ข้อมูลจริงหรือข้อมูลทางการ
