@@ -20,6 +20,16 @@ DISEASES = [
     "โรคลมแดด",
     "โรคอุจจาระร่วงเฉียบพลัน",
 ]
+AGE_GROUPS = [
+    "0–4 ปี",
+    "5–14 ปี",
+    "15–24 ปี",
+    "25–44 ปี",
+    "45–59 ปี",
+    "60 ปีขึ้นไป",
+]
+
+SEXES = ["ชาย", "หญิง"]
 MONTHS = [
     "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
     "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
@@ -92,6 +102,74 @@ def build_demo_data() -> pd.DataFrame:
                     })
     return pd.DataFrame(rows)
 
+
+def add_demo_demographics(data: pd.DataFrame) -> pd.DataFrame:
+    """Add synthetic age/sex groups while preserving each original total."""
+
+    data = data.copy()
+
+    # If the dataset already contains complete demographic fields,
+    # keep the existing records without splitting them again.
+    if (
+        {"age_group", "sex"}.issubset(data.columns)
+        and data[["age_group", "sex"]].notna().all().all()
+    ):
+        return data
+
+    # Illustrative proportions for the prototype only.
+    # These are assumptions, NOT actual epidemiological statistics.
+    age_weights = {
+        "โรคมือเท้าปาก": [0.25, 0.58, 0.08, 0.06, 0.02, 0.01],
+        "โรคไข้เลือดออก": [0.08, 0.22, 0.28, 0.25, 0.11, 0.06],
+        "โรคปอดบวม": [0.12, 0.12, 0.08, 0.18, 0.20, 0.30],
+        "โรคไข้หวัดใหญ่": [0.12, 0.20, 0.18, 0.22, 0.14, 0.14],
+        "โรคลมแดด": [0.02, 0.06, 0.22, 0.35, 0.20, 0.15],
+        "โรคอุจจาระร่วงเฉียบพลัน": [
+            0.20, 0.20, 0.16, 0.20, 0.12, 0.12
+        ],
+    }
+
+    sex_weights = [0.52, 0.48]
+    records = []
+
+    for row in data.to_dict("records"):
+        total = max(0, int(row["cases"]))
+        weights = []
+        groups = []
+
+        disease_weights = age_weights.get(
+            row["disease"],
+            [1 / len(AGE_GROUPS)] * len(AGE_GROUPS),
+        )
+
+        # Create all age × sex combinations.
+        for age, age_weight in zip(AGE_GROUPS, disease_weights):
+            for sex, sex_weight in zip(SEXES, sex_weights):
+                groups.append((age, sex))
+                weights.append(age_weight * sex_weight)
+
+        # Allocate whole-number cases using the largest-remainder method.
+        raw = [total * weight for weight in weights]
+        counts = [math.floor(value) for value in raw]
+        remaining = total - sum(counts)
+
+        order = sorted(
+            range(len(raw)),
+            key=lambda i: raw[i] - counts[i],
+            reverse=True,
+        )
+
+        for i in order[:remaining]:
+            counts[i] += 1
+
+        for (age, sex), count in zip(groups, counts):
+            new_row = row.copy()
+            new_row["age_group"] = age
+            new_row["sex"] = sex
+            new_row["cases"] = int(count)
+            records.append(new_row)
+
+    return pd.DataFrame(records)
 
 def load_data() -> pd.DataFrame:
     """Load a compatible local CSV; otherwise use the built-in synthetic dataset."""
@@ -207,7 +285,7 @@ def status_reason(status: str, ratio, threshold: float) -> str:
 
 
 # Load data and initialise state.
-df = load_data()
+df = add_demo_demographics(load_data())
 regions = sorted(
     df["health_region"].dropna().astype(str).unique().tolist(),
     key=lambda value: int(value.rsplit(" ", 1)[-1]) if value.rsplit(" ", 1)[-1].isdigit() else 999,
